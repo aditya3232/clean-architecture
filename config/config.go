@@ -13,6 +13,7 @@ type App struct {
 	ServerTimeOut int    `json:"server_timeout"`
 	JwtSecretKey  string `json:"jwt_secret_key"`
 	JwtIssuer     string `json:"jwt_issuer"`
+	UrlFrontFE    string `json:"url_front_fe"`
 }
 
 type PsqlDB struct {
@@ -63,6 +64,7 @@ func NewConfig() *Config {
 			ServerTimeOut: viper.GetInt("SERVER_TIMEOUT"),
 			JwtSecretKey:  viper.GetString("JWT_SECRET_KEY"),
 			JwtIssuer:     viper.GetString("JWT_ISSUER"),
+			UrlFrontFE:    viper.GetString("URL_FRONT_FE"),
 		},
 		Psql: PsqlDB{
 			Host:      viper.GetString("DATABASE_HOST"),

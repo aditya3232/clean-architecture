@@ -40,12 +40,12 @@ type userService struct {
 	cfg        *config.Config
 	jwtService JwtServiceInterface
 	repoToken  outbound.VerificationTokenRepositoryInterface
-	publisher  outbound.PublisherMessageInterface
+	publisher  KafkaServiceInterface
 	redis      *redis.Client
 }
 
 func NewUserService(repo outbound.UserRepositoryInterface, cfg *config.Config, jwtService JwtServiceInterface,
-	repoToken outbound.VerificationTokenRepositoryInterface, publisher outbound.PublisherMessageInterface,
+	repoToken outbound.VerificationTokenRepositoryInterface, publisher KafkaServiceInterface,
 	redis *redis.Client) UserServiceInterface {
 	return &userService{
 		repo:       repo,
@@ -82,12 +82,17 @@ func (u *userService) UpdateCustomer(ctx context.Context, req entity.UserEntity)
 
 	if passwordNoencrypt != "" {
 		messageparam := fmt.Sprintf("You're account has been updated. Please login use: \n Email: %s\nPassword: %s", req.Email, passwordNoencrypt)
+
+		publishMessage := entity.PublishMessage{
+			Email:     req.Email,
+			Message:   messageparam,
+			UserId:    req.ID,
+			Subject:   "Update Data",
+			QueueName: utils.NOTIF_EMAIL_UPDATE_CUSTOMER,
+		}
+
 		go func() {
-			err := u.publisher.PublishMessage(req.ID,
-				req.Email,
-				messageparam,
-				utils.NOTIF_EMAIL_UPDATE_CUSTOMER,
-				"Updated Data")
+			err := u.publisher.PublishMessage(ctx, publishMessage)
 			if err != nil {
 				log.Errorf("[UserService-3] PublishMessage error: %v", err)
 			}
@@ -112,12 +117,17 @@ func (u *userService) CreateCustomer(ctx context.Context, req entity.UserEntity)
 	}
 
 	messageparam := fmt.Sprintf("You have been registered in Sayur Project. Please login use: \n Email: %s\nPassword: %s", req.Email, passwordNoEncrypt)
+
+	publishMessage := entity.PublishMessage{
+		Email:     req.Email,
+		Message:   messageparam,
+		UserId:    userID,
+		Subject:   "Account Exists",
+		QueueName: utils.NOTIF_EMAIL_CREATE_CUSTOMER,
+	}
+
 	go func() {
-		err := u.publisher.PublishMessage(userID,
-			req.Email,
-			messageparam,
-			utils.NOTIF_EMAIL_CREATE_CUSTOMER,
-			"Account Exists")
+		err := u.publisher.PublishMessage(ctx, publishMessage)
 		if err != nil {
 			log.Errorf("[UserService-5] PublishMessage error: %v", err)
 		}
@@ -240,12 +250,17 @@ func (u *userService) ForgotPassword(ctx context.Context, req entity.UserEntity)
 
 	urlForgot := fmt.Sprintf("%s/auth/update-password?token=%s", u.cfg.App.UrlFrontFE, token)
 	messageparam := fmt.Sprintf("Please click link below for reset password: %v", urlForgot)
+
+	publishMessage := entity.PublishMessage{
+		Email:     req.Email,
+		Message:   messageparam,
+		UserId:    user.ID,
+		Subject:   "Reset Password",
+		QueueName: utils.NOTIF_EMAIL_FORGOT_PASSWORD,
+	}
+
 	go func() {
-		err := u.publisher.PublishMessage(user.ID,
-			req.Email,
-			messageparam,
-			utils.NOTIF_EMAIL_FORGOT_PASSWORD,
-			"Reset Password")
+		err := u.publisher.PublishMessage(ctx, publishMessage)
 		if err != nil {
 			log.Errorf("[UserService-3] PublishMessage error: %v", err)
 		}
@@ -272,14 +287,17 @@ func (u *userService) CreateUserAccount(ctx context.Context, req entity.UserEnti
 
 	verifyURL := fmt.Sprintf("%s/auth/verify-account?token=%s", u.cfg.App.UrlFrontFE, req.Token)
 	verifyMsg := fmt.Sprintf("Please verify your account by clicking the link: %s", verifyURL)
+
+	publishMessage := entity.PublishMessage{
+		Email:     req.Email,
+		Message:   verifyMsg,
+		UserId:    userID,
+		Subject:   "Verify Your Account",
+		QueueName: utils.NOTIF_EMAIL_VERIFICATION,
+	}
+
 	go func() {
-		err := u.publisher.PublishMessage(
-			userID,
-			req.Email,
-			verifyMsg,
-			utils.NOTIF_EMAIL_VERIFICATION,
-			"Verify Your Account",
-		)
+		err := u.publisher.PublishMessage(ctx, publishMessage)
 		if err != nil {
 			log.Errorf("[UserService-3] PublishMessage error: %v", err)
 		}
