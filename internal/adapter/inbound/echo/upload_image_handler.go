@@ -56,13 +56,19 @@ func (u *uploadImageHandler) UploadImage(c echo.Context) error {
 
 	uploadPath := fmt.Sprintf("public/uploads/%s", newFileName)
 
-	url, err := u.storageHandler.UploadFile(uploadPath, fileBuffer)
+	_, err = u.storageHandler.UploadFile(uploadPath, fileBuffer)
 	if err != nil {
 		return response.RespondWithError(c, http.StatusInternalServerError, "[UploadImage-5] UploadImage", err)
 	}
 
+	// Generate Presigned URL
+	presignedURL, err := u.storageHandler.GetPresignedURL(uploadPath, time.Hour)
+	if err != nil {
+		return response.RespondWithError(c, http.StatusInternalServerError, "[UploadImage-6] UploadImage", err)
+	}
+
 	resp.Message = "Success"
-	resp.Data = map[string]string{"image_url": url}
+	resp.Data = map[string]string{"image_url": presignedURL}
 
 	return c.JSON(http.StatusOK, resp)
 }

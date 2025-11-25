@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"clean-architecture/internal/port/outbound"
 	"context"
-	"fmt"
+	"net/url"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 )
@@ -38,7 +39,22 @@ func (m *MinioStorage) UploadFile(path string, file *bytes.Buffer) (string, erro
 		return "", err
 	}
 
-	// URL publik / signed URL sesuai kebutuhan
-	url := fmt.Sprintf("%s/%s/%s", m.BaseURL, m.BucketName, path)
-	return url, nil
+	return path, nil
+}
+
+func (m *MinioStorage) GetPresignedURL(path string, expiry time.Duration) (string, error) {
+	reqParams := make(url.Values)
+
+	presignedURL, err := m.Client.PresignedGetObject(
+		context.Background(),
+		m.BucketName,
+		path,
+		expiry,
+		reqParams,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return presignedURL.String(), nil
 }
