@@ -16,7 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/IBM/sarama"
 	"github.com/labstack/gommon/log"
 
 	"github.com/go-playground/validator/v10/translations/en"
@@ -27,7 +26,7 @@ import (
 func RunServer() {
 	cfg := config.NewConfig()
 	redisConfig := cfg.RedisConfig()
-	saramaConfig := sarama.NewConfig()
+	kafkaConfig := cfg.NewKafkaConfig()
 
 	initMinio, err := cfg.InitMinio()
 	if err != nil {
@@ -46,7 +45,7 @@ func RunServer() {
 	}
 	appPort := ":" + cfg.App.AppPort
 
-	publisher, err := outboundadapterkafka.NewKafkaProducer(cfg.Kafka.Brokers, saramaConfig)
+	publisher, err := outboundadapterkafka.NewKafkaProducer(cfg.Kafka.Brokers, kafkaConfig)
 	if err != nil {
 		log.Fatalf("[RunServer-3] Failed to init Kafka: %v", err)
 	}

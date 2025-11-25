@@ -1,6 +1,6 @@
 ## 🚀 Arsitektur
 
-Service untuk manajemen nomor telepon dengan pendekatan **Hexagonal Architecture (Ports & Adapters)**.  
+**Hexagonal Architecture (Ports & Adapters)**.
 Tujuannya adalah menjaga **domain/business logic tetap murni**, terpisah dari framework, database, dan teknologi eksternal lainnya.
 
 Dependency dalam arsitektur hexagonal mengikuti Dependency Inversion Principle:
@@ -13,8 +13,8 @@ Dependency dalam arsitektur hexagonal mengikuti Dependency Inversion Principle:
 
 ### 1. Clone Repository
 ```bash
-  git clone https://github.com/username/ms-telnum-manager.git
-  cd clean-architecture
+  git clone git@github.com:aditya3232/ms-totp.git
+  cd ms-totp
 ```
 
 ### 2. Install Dependency
@@ -42,12 +42,46 @@ Dependency dalam arsitektur hexagonal mengikuti Dependency Inversion Principle:
   go run main.go migrate status
 ```
 
-### 7. Menjalankan Service
+### 7. Jalankan Seed (admin & role)
+```bash
+  go run main.go seed
+```
+
+### 8. Menjalankan Service
 ```bash
   go run main.go start
 ```
 
+### 9. Menjalankan Unit Test
+```bash
+  go test ./tests/handler -v 
+```
+
+### 10. Menjalankan Semua Unit Test
+```bash
+  go test ./... -v
+```
+
+### 11. Menjalankan Salah Satu Test
+```bash
+  go test ./tests/handler -run TestGetAllRoles_Success -v
+```
+
+### 12. Cek Coverage
+```bash
+  go test -coverpkg=./... ./tests/handler -coverprofile=coverage.out
+  go tool cover -func=coverage.out
+```
 ---
+
+### 13. Get Detail Coverage
+```bash
+go test -coverpkg=./... ./tests/handler -coverprofile=coverage.out && \
+go tool cover -func=coverage.out \
+  | grep -E "user_handler.go|user_service.go|role_handler.go|role_service.go" \
+  | grep -E "GetCustomerByID|GetAll|GetByID|Create|Update|SignIn|VerifyAccount|ForgotPassword|CreateUserAccount|UpdatePassword|GetProfileUser" \
+  | grep -E "[0-9]+\.[0-9]+%"
+```
 
 ### 🔄 Gambaran Arsitektur
                 [ Inbound Adapters ]
@@ -89,21 +123,24 @@ Dependency dalam arsitektur hexagonal mengikuti Dependency Inversion Principle:
 ## 📂 Struktur Project
 
 ```bash
-ms-telnum-manager/
+service-name/
 ├── cmd/                           # Entry point (main.go, bootstrap)
 │
 ├── config/                        # File konfigurasi (env, yaml, json)
 │
 ├── internal/                      # Semua kode inti aplikasi
 │   ├── adapter/                   # Implementasi inbound & outbound adapter
-│   │   ├── inbound/               # Apa yang aplikasi tawarkan (HTTP, gRPC, WebSocket, dll.)
-│   │   │   ├── echo/              
+│   │   ├── inbound/               # Apa yang aplikasi tawarkan (HTTP, gRPC, WebSocket, message consumer)
+│   │   │   ├── echo/
 │   │   │   │   ├── request/       # DTO request untuk Echo
 │   │   │   │   ├── response/      # DTO response untuk Echo
+│   │   │   ├── websocket/
+│   │   │       ├── request/       # DTO request untuk WebSocket
+│   │   │       ├── response/      # DTO response untuk WebSocket
 │   │   │
-│   │   ├── outbound/              # Apa yang aplikasi butuhkan (DB, broker, storage, API eksternal)
+│   │   ├── outbound/              # Apa yang aplikasi butuhkan (DB, broker, storage, message publisher, API eksternal)
 │   │       ├── httpclient/        # Adapter untuk komunikasi HTTP dengan service eksternal
-│   │       ├── postgres/          
+│   │       ├── postgres/
 │   │           ├── model/         # Struktur data mapping tabel database
 │   │           ├── repository/    # Implementasi repository (akses DB)
 │   │

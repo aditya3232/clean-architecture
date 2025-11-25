@@ -14,6 +14,8 @@ type Kafka struct {
 }
 
 func NewKafkaProducer(brokers []string, config *sarama.Config) (outbound.KafkaProducerInterface, error) {
+	log.Printf("Return.Successes=%v", config.Producer.Return.Successes)
+
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
 		return nil, err

@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"veggo-user-service/internal/app"
+	"clean-architecture/internal/app"
 
 	"github.com/spf13/cobra"
 )

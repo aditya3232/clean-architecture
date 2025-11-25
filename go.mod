@@ -5,6 +5,7 @@ go 1.25.3
 require (
 	github.com/google/uuid v1.6.0
 	github.com/rs/zerolog v1.34.0
+	github.com/spf13/cobra v1.10.1
 	golang.org/x/crypto v0.43.0
 	gorm.io/gorm v1.25.10
 )
@@ -21,6 +22,7 @@ require (
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.7.5 // indirect
