@@ -50,7 +50,7 @@ func RunServer() {
 		log.Fatalf("[RunServer-3] Failed to init Kafka: %v", err)
 	}
 
-	minioClient := outboundadapterminio.NewMinioStorage(initMinio, cfg.Minio.Bucket, cfg.Minio.Endpoint)
+	minioClient := outboundadapterminio.NewMinioStorage(initMinio, cfg.Minio.Bucket)
 	userRepo := outboundadapterpostgres.NewUserRepository(db.DB)
 	verificationTokenRepo := outboundadapterpostgres.NewVerificationTokenRepository(db.DB)
 	roleRepo := outboundadapterpostgres.NewRoleRepository(db.DB)

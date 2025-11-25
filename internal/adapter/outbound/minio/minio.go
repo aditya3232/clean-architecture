@@ -13,14 +13,12 @@ import (
 type MinioStorage struct {
 	Client     *minio.Client
 	BucketName string
-	BaseURL    string // domain minio yang bisa diakses client
 }
 
-func NewMinioStorage(client *minio.Client, bucket, baseUrl string) outbound.MinioInterface {
+func NewMinioStorage(client *minio.Client, bucket string) outbound.MinioInterface {
 	return &MinioStorage{
 		Client:     client,
 		BucketName: bucket,
-		BaseURL:    baseUrl,
 	}
 }
 
