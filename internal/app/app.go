@@ -3,6 +3,7 @@ package app
 import (
 	"clean-architecture/config"
 	inboundadapterecho "clean-architecture/internal/adapter/inbound/echo"
+	outboundadapterkafka "clean-architecture/internal/adapter/outbound/kafka"
 	outboundadapterminio "clean-architecture/internal/adapter/outbound/minio"
 	outboundadapterpostgres "clean-architecture/internal/adapter/outbound/postgres/repository"
 	"clean-architecture/internal/domain/service"
@@ -15,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/labstack/gommon/log"
 
 	"github.com/go-playground/validator/v10/translations/en"
@@ -25,17 +27,18 @@ import (
 func RunServer() {
 	cfg := config.NewConfig()
 	redisConfig := cfg.RedisConfig()
-	minio := outboundadapterminio.NewMinioStorage()
+	saramaConfig := sarama.NewConfig()
 
-	db, err := cfg.ConnectionPostgres()
+	initMinio, err := cfg.InitMinio()
 	if err != nil {
-		log.Fatalf("[RunServer-1] Failed to connect Postgres: %v", err)
+		log.Fatalf("[RunServer-1] Failed to connect Minio: %v", err)
 		return
 	}
 
-	publisherMessage, err := outboundadapterrabbitmq.NewPublisherMessage(cfg)
+	db, err := cfg.ConnectionPostgres()
 	if err != nil {
-		log.Fatalf("[RunServer-2] Failed to init RabbitMQ: %v", err)
+		log.Fatalf("[RunServer-2] Failed to connect Postgres: %v", err)
+		return
 	}
 
 	if cfg.App.AppPort == "" {
@@ -43,12 +46,19 @@ func RunServer() {
 	}
 	appPort := ":" + cfg.App.AppPort
 
+	publisher, err := outboundadapterkafka.NewKafkaProducer(cfg.Kafka.Brokers, saramaConfig)
+	if err != nil {
+		log.Fatalf("[RunServer-3] Failed to init Kafka: %v", err)
+	}
+
+	minioClient := outboundadapterminio.NewMinioStorage(initMinio, cfg.Minio.Bucket, cfg.Minio.Endpoint)
 	userRepo := outboundadapterpostgres.NewUserRepository(db.DB)
 	verificationTokenRepo := outboundadapterpostgres.NewVerificationTokenRepository(db.DB)
 	roleRepo := outboundadapterpostgres.NewRoleRepository(db.DB)
 
 	jwtService := service.NewJwtService(cfg)
-	userService := service.NewUserService(userRepo, cfg, jwtService, verificationTokenRepo, publisherMessage, redisConfig)
+	kafkaService := service.NewKafkaService(cfg, publisher)
+	userService := service.NewUserService(userRepo, cfg, jwtService, verificationTokenRepo, kafkaService, redisConfig)
 	roleService := service.NewRoleService(roleRepo)
 
 	e := echo.New()
@@ -58,7 +68,7 @@ func RunServer() {
 
 	customValidator := validator.NewValidator(db.DB)
 	if err := en.RegisterDefaultTranslations(customValidator.Validator, customValidator.Translator); err != nil {
-		log.Fatalf("[RunServer-3] %v", err)
+		log.Fatalf("[RunServer-4] %v", err)
 		return
 	}
 	e.Validator = customValidator
@@ -68,14 +78,14 @@ func RunServer() {
 	pingHandler := inboundadapterecho.NewPingHandler()
 	userHandler := inboundadapterecho.NewUserHandler(userService)
 	roleHandler := inboundadapterecho.NewRoleHandler(roleService)
-	uploadImageHandler := inboundadapterecho.NewUploadImageHandler(supabase)
+	uploadImageHandler := inboundadapterecho.NewUploadImageHandler(minioClient)
 
 	inboundadapterecho.InitRoutes(e, mid, pingHandler, userHandler, roleHandler, uploadImageHandler)
 
 	go func() {
-		log.Infof("[RunServer] Server starting at %s", appPort)
+		log.Infof("[RunServer-5] Server starting at %s", appPort)
 		if err := e.Start(appPort); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("[RunServer-4] Server start failed: %v", err)
+			log.Fatalf("[RunServer-6] Server start failed: %v", err)
 		}
 	}()
 
@@ -84,13 +94,13 @@ func RunServer() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	log.Infof("[RunServer] Shutting down gracefully...")
+	log.Infof("[RunServer-7] Shutting down gracefully...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := e.Shutdown(ctx); err != nil {
-		log.Fatalf("[RunServer-5] Server forced to shutdown: %v", err)
+		log.Fatalf("[RunServer-8] Server forced to shutdown: %v", err)
 	}
 
-	log.Infof("[RunServer] Server exited properly")
+	log.Infof("[RunServer-9] Server exited properly")
 }
